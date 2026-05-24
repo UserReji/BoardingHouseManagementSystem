@@ -24,12 +24,13 @@ RUN composer install --no-dev --optimize-autoloader
 RUN pip3 install --no-cache-dir pdfplumber --break-system-packages
 
 RUN cp .env.example .env \
-    && php artisan storage:link \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 8000
 
-CMD rm -f .env && \
+CMD rm -f .env bootstrap/cache/config.php bootstrap/cache/routes*.php && \
     php artisan config:clear && \
+    php artisan storage:link && \
     php artisan migrate --force && \
+    php artisan db:seed --force && \
     php artisan serve --host=0.0.0.0 --port=8000
