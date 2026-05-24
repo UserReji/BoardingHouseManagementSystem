@@ -39,7 +39,6 @@ WORKDIR /var/www
 
 ENV PYTHON_PATH=/usr/bin/python3
 ENV APP_URL=https://YOUR_RENDER_URL.onrender.com
-ENV NODE_ENV=production
 
 COPY . .
 
@@ -50,9 +49,9 @@ RUN mkdir -p /var/www/storage/framework/{sessions,views,cache} \
 
 RUN composer install --no-dev --optimize-autoloader
 
-# Install npm dependencies with cache
+# Install npm dependencies with devDependencies (needed for build)
 RUN npm cache clean --force || true
-RUN npm ci --verbose
+RUN npm ci
 RUN npm run build
 
 # Clean npm cache to reduce layer size
@@ -67,6 +66,9 @@ RUN php artisan key:generate --force
 RUN php artisan config:cache
 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+
+# Set production environment after build
+ENV NODE_ENV=production
 
 EXPOSE 8000
 CMD php artisan config:clear && \
