@@ -1,6 +1,6 @@
 FROM php:8.3-cli
 
-# System deps + Node.js 20 in one layer
+# System deps
 RUN apt-get update && apt-get install -y \
     curl gnupg git unzip libpng-dev libonig-dev libxml2-dev \
     libzip-dev libfreetype6-dev libjpeg62-turbo-dev libpq-dev \
@@ -18,16 +18,15 @@ WORKDIR /var/www
 
 COPY . .
 
+RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache
+
 RUN composer install --no-dev --optimize-autoloader
 RUN pip3 install --no-cache-dir pdfplumber --break-system-packages
 
-RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
-    && cp .env.example .env \
+RUN cp .env.example .env \
     && php artisan key:generate --force \
     && php artisan storage:link \
     && chown -R www-data:www-data storage bootstrap/cache
-
-ENV APP_ENV=production APP_DEBUG=false
 
 EXPOSE 8000
 
