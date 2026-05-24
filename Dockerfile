@@ -21,7 +21,7 @@ WORKDIR /var/www
 COPY . .
 
 RUN composer install --no-dev --optimize-autoloader
-RUN npm ci && npm run build
+RUN npm install && npm run build
 RUN pip3 install --no-cache-dir pdfplumber --break-system-packages
 
 RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
