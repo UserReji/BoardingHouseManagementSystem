@@ -1,14 +1,29 @@
 # Dockerfile for Laravel Boarding House Management System on Render.com
 FROM php:8.3-fpm
 
-# Install system dependencies + Python
+# Install build tools and dependencies first
 RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev zip unzip \
-    libzip-dev libfreetype6-dev libjpeg62-turbo-dev libpq-dev \
-    python3 python3-pip \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    build-essential \
+    git \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpq-dev \
+    python3 \
+    python3-pip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20 from NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg
@@ -16,6 +31,9 @@ RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Verify Node.js and npm are installed
+RUN node --version && npm --version
 
 WORKDIR /var/www
 
@@ -32,9 +50,13 @@ RUN mkdir -p /var/www/storage/framework/{sessions,views,cache} \
 
 RUN composer install --no-dev --optimize-autoloader
 
-# Install npm dependencies and build assets
-RUN npm ci
+# Install npm dependencies with cache
+RUN npm cache clean --force || true
+RUN npm ci --verbose
 RUN npm run build
+
+# Clean npm cache to reduce layer size
+RUN npm cache clean --force
 
 # Install Python dependencies for PDF parsing
 RUN pip3 install --no-cache-dir pdfplumber --break-system-packages
