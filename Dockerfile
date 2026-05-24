@@ -24,7 +24,6 @@ RUN composer install --no-dev --optimize-autoloader
 RUN pip3 install --no-cache-dir pdfplumber --break-system-packages
 
 RUN cp .env.example .env \
-    && php artisan key:generate --force \
     && php artisan storage:link \
     && chown -R www-data:www-data storage bootstrap/cache
 
