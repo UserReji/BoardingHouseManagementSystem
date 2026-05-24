@@ -26,10 +26,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $manager = User::query()->updateOrCreate(
-            ['email' => 'manager@example.com'],
+            ['email' => 'Admin@gmail.com'],
             [
-                'name' => 'House Manager',
-                'password' => Hash::make('password'),
+                'name' => 'Administrator',
+                'password' => Hash::make('042791'),
                 'role' => UserRole::Manager,
                 'phone' => '0917 000 0001',
                 'is_active' => true,
@@ -71,21 +71,6 @@ class DatabaseSeeder extends Seeder
                 'emergency_contact' => 'Parent - 0917 000 0003',
                 'room_id' => $roomA->id,
                 'move_in_date' => now()->subMonths(2)->toDateString(),
-                'is_active' => true,
-            ],
-        );
-
-        $admin = User::query()->updateOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'name' => 'Administrator',
-                'password' => Hash::make('042791'),
-                'role' => UserRole::Manager,
-                'phone' => '0917 000 0003',
-                'address' => 'Admin City',
-                'emergency_contact' => 'Contact - 0917 000 0004',
-                'room_id' => $roomB->id,
-                'move_in_date' => now()->subMonths(1)->toDateString(),
                 'is_active' => true,
             ],
         );
