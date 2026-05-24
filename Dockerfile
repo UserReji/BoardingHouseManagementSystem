@@ -20,6 +20,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 
 ENV PYTHON_PATH=/usr/bin/python3
+ENV APP_URL=https://YOUR_RENDER_URL.onrender.com
+ENV NODE_ENV=production
 
 COPY . .
 
@@ -29,12 +31,18 @@ RUN mkdir -p /var/www/storage/framework/{sessions,views,cache} \
     && mkdir -p /var/www/bootstrap/cache
 
 RUN composer install --no-dev --optimize-autoloader
-RUN npm ci && npm run build
+
+# Install npm dependencies and build assets
+RUN npm ci
+RUN npm run build
 
 # Install Python dependencies for PDF parsing
 RUN pip3 install --no-cache-dir pdfplumber --break-system-packages
 
-RUN cp .env.example .env && php artisan key:generate --force
+# Setup environment
+RUN cp .env.example .env
+RUN php artisan key:generate --force
+RUN php artisan config:cache
 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
