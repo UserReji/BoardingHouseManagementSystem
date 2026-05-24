@@ -1,95 +1,45 @@
 # Dockerfile for Laravel Boarding House Management System on Render.com
+FROM php:8.3-fpm
 
-# =========================
-# BUILD STAGE
-# =========================
-FROM php:8.2-composer AS builder
-
-# Install system dependencies
+# Install system dependencies + Python
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    nodejs \
-    npm \
-    && rm -rf /var/lib/apt/lists/*
+    git curl libpng-dev libonig-dev libxml2-dev zip unzip \
+    libzip-dev libfreetype6-dev libjpeg62-turbo-dev libpq-dev \
+    python3 python3-pip \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
-
-# Set working directory
-WORKDIR /app
-
-# Copy composer files and install PHP dependencies
-COPY composer.json composer.lock ./
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-
-# Copy package files and install Node.js dependencies
-COPY package.json package-lock.json vite.config.js ./
-RUN npm install
-
-# Copy application code
-COPY . .
-
-# Build frontend assets
-RUN npm run build
-
-# =========================
-# PRODUCTION STAGE
-# =========================
-FROM php:8.2-fpm
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip
 
 # Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
-WORKDIR /var/www/html
+WORKDIR /var/www
 
-# Copy built assets and PHP dependencies from builder stage
-COPY --from=builder /app/vendor ./vendor
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/resources ./resources
-COPY --from=builder /app/database ./database
-COPY --from=builder /app/app ./app
-COPY --from=builder /app/bootstrap ./bootstrap
-COPY --from=builder /app/config ./config
-COPY --from=builder /app/routes ./routes
+ENV PYTHON_PATH=/usr/bin/python3
 
-# Copy .env.example as .env.template (will be overridden by Render env vars)
-COPY --from=builder /app/.env.example .env.template
+COPY . .
 
-# Set permissions for storage and cache directories
-RUN mkdir -p storage/framework/{sessions,views,cache} \
-    && mkdir -p bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+# Create necessary directories
+RUN mkdir -p /var/www/storage/framework/{sessions,views,cache} \
+    && mkdir -p /var/www/storage/logs \
+    && mkdir -p /var/www/bootstrap/cache
 
-# Expose port (Render will set PORT environment variable)
+RUN composer install --no-dev --optimize-autoloader
+RUN npm ci && npm run build
+
+# Install Python dependencies for PDF parsing
+RUN pip3 install --no-cache-dir pdfplumber --break-system-packages
+
+RUN cp .env.example .env && php artisan key:generate --force
+
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+
 EXPOSE 8000
-
-# Use Laravel Octane for better performance
-# Install Octane and Swoole
-RUN pecl install swoole && docker-php-ext-enable swoole
-RUN composer require laravel/octane --no-interaction --optimize-autoloader --no-dev
-RUN php artisan octane:install --server=swoole --no-interaction
-
-# Start Octane server using Render's PORT environment variable
-CMD php artisan octane:start --host=0.0.0.0 --port=${PORT:-8000} --workers=2 --max-requests=1000
+CMD php artisan config:clear && \
+    php artisan config:cache && \
+    php artisan migrate --force && \
+    php artisan serve --host=0.0.0.0 --port=8000
