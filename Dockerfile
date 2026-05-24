@@ -5,8 +5,6 @@ RUN apt-get update && apt-get install -y \
     curl gnupg git unzip libpng-dev libonig-dev libxml2-dev \
     libzip-dev libfreetype6-dev libjpeg62-turbo-dev libpq-dev \
     python3 python3-pip \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # PHP extensions
@@ -21,7 +19,6 @@ WORKDIR /var/www
 COPY . .
 
 RUN composer install --no-dev --optimize-autoloader
-RUN npm install && npm run build
 RUN pip3 install --no-cache-dir pdfplumber --break-system-packages
 
 RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
@@ -35,5 +32,5 @@ ENV APP_ENV=production APP_DEBUG=false
 EXPOSE 8000
 
 CMD php artisan config:clear && \
-    php artisan migrate --seed --force && \
+    php artisan migrate --force && \
     php artisan serve --host=0.0.0.0 --port=8000
