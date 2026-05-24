@@ -35,5 +35,5 @@ ENV APP_ENV=production APP_DEBUG=false
 EXPOSE 8000
 
 CMD php artisan config:clear && \
-    php artisan migrate --force && \
+    php artisan migrate --seed --force && \
     php artisan serve --host=0.0.0.0 --port=8000
