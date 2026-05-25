@@ -12,7 +12,23 @@ class BillingPeriodController extends Controller
     public function index()
     {
         return view('manager.billing-periods.index', [
-            'periods' => BillingPeriod::withCount('tenantBills')->latest('starts_at')->paginate(12),
+            'periods' => BillingPeriod::withCount('tenantBills')
+                ->where('is_closed', false)
+                ->latest('starts_at')
+                ->paginate(12),
+        ]);
+    }
+
+    public function archived()
+    {
+        return view('manager.billing-periods.archived', [
+            'periods' => BillingPeriod::withTrashed()
+                ->withCount('tenantBills')
+                ->where(function ($q) {
+                    $q->where('is_closed', true)->orWhereNotNull('deleted_at');
+                })
+                ->latest('starts_at')
+                ->paginate(12),
         ]);
     }
 
@@ -47,10 +63,31 @@ class BillingPeriodController extends Controller
         return redirect()->route('manager.billing-periods.show', $billingPeriod)->with('status', 'Billing period updated.');
     }
 
+    /**
+     * Soft-delete (archive) a billing period — preserves all bill records.
+     */
     public function destroy(BillingPeriod $billingPeriod)
     {
+        $billingPeriod->update(['is_closed' => true]);
         $billingPeriod->delete();
 
-        return redirect()->route('manager.billing-periods.index')->with('status', 'Billing period deleted.');
+        return redirect()->route('manager.billing-periods.index')->with('status', 'Billing period archived. All bill records are preserved.');
+    }
+
+    public function restore($id)
+    {
+        $period = BillingPeriod::withTrashed()->findOrFail($id);
+        $period->restore();
+        $period->update(['is_closed' => false]);
+
+        return redirect()->route('manager.billing-periods.archived')->with('status', 'Billing period restored.');
+    }
+
+    public function forceDelete($id)
+    {
+        $period = BillingPeriod::withTrashed()->findOrFail($id);
+        $period->forceDelete();
+
+        return redirect()->route('manager.billing-periods.archived')->with('status', 'Billing period permanently deleted.');
     }
 }

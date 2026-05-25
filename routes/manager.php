@@ -18,8 +18,19 @@ Route::prefix('manager')
     ->middleware(['auth', 'role:manager'])
     ->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        // Tenants — active list, archived list, restore, force delete
         Route::resource('tenants', TenantController::class);
+        Route::get('tenants-archived', [TenantController::class, 'archived'])->name('tenants.archived');
+        Route::patch('tenants/{tenant}/restore', [TenantController::class, 'restore'])->name('tenants.restore');
+        Route::delete('tenants/{tenant}/force-delete', [TenantController::class, 'forceDelete'])->name('tenants.force-delete');
+
+        // Billing Periods — active, archived, restore, force delete
         Route::resource('billing-periods', BillingPeriodController::class);
+        Route::get('billing-periods-archived', [BillingPeriodController::class, 'archived'])->name('billing-periods.archived');
+        Route::patch('billing-periods/{id}/restore', [BillingPeriodController::class, 'restore'])->name('billing-periods.restore');
+        Route::delete('billing-periods/{id}/force-delete', [BillingPeriodController::class, 'forceDelete'])->name('billing-periods.force-delete');
+
         Route::resource('tenant-bills', TenantBillController::class);
         Route::resource('meter-readings', MeterReadingController::class);
         Route::resource('photos', PhotoController::class)->except(['edit', 'update']);
